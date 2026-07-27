@@ -2,15 +2,11 @@
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bodhi584/rohlik-demand-forecasting-cost-aware-stocking/blob/main/notebooks/demand_forecasting_cost_aware_stocking.ipynb)
 
-[Notebook](notebooks/demand_forecasting_cost_aware_stocking.ipynb) · [Data notes](data/README.md) · [Reproduce](#reproduce-the-analysis)
+[Review the notebook](notebooks/demand_forecasting_cost_aware_stocking.ipynb) · [See the results](#results) · [Inspect or rerun](#inspect-or-rerun-the-analysis) · [Read the data notes](data/README.md)
 
-**An end-to-end forecasting and decision-support case study for perishable e-grocery.**
+**An evidence-led forecasting and decision-support case study for perishable e-grocery.** It compares ARIMA with feature-aware Prophet forecasts, then translates forecast errors into cost-aware stocking policies using newsvendor quantiles.
 
-This project uses public Rohlik e-grocery sales data to test a practical question: can a better demand forecast, paired with an explicit cost model, support better stocking decisions for perishable products?
-
-The work moves from data audit and time-series forecasting to newsvendor quantile policies, financial-loss comparison, statistical uncertainty, and sensitivity analysis. It is designed as a reproducible portfolio case study rather than a claim about Rohlik's actual inventory operations.
-
-> **Headline outcome:** Prophet improved out-of-sample forecast accuracy over ARIMA. Under Base ESG assumptions, cost-aware Prophet policies lowered estimated penalty by about 20% relative to ARIMA, while statistical testing did not support declaring 63.3% or 67.2% the definitive winner.
+> **Result:** Prophet produced significantly lower squared forecast error than the ARIMA benchmark on the 154-day holdout. Under the Base ESG cost scenario, both tuned Prophet policies reduced estimated penalty by about 19-20% versus ARIMA, but their difference was not statistically decisive.
 
 ![Financial loss by forecast-based strategy](figures/financial_loss_by_strategy.png)
 
@@ -18,101 +14,120 @@ The work moves from data audit and time-series forecasting to newsvendor quantil
 
 | | |
 |---|---|
-| **Business problem** | Balance lost-margin risk from under-forecasting against spoilage risk from over-forecasting |
-| **Analytical scope** | 10 high-volume perishable SKUs at Prague_1; 154-day out-of-sample test period |
-| **Forecasting models** | ARIMA benchmark and Prophet with holiday and discount regressors |
-| **Decision policies** | Prophet 50% neutral forecast plus 67.2% commercial and 63.3% ESG target quantiles |
-| **Validation** | MAE, RMSE, sMAPE, Diebold-Mariano testing, paired HAC confidence intervals, and cost sensitivity analysis |
-| **Tools** | Python, pandas, Prophet, statsmodels, scikit-learn, SciPy, Matplotlib, Seaborn |
-
-## Project Components
-
-- Audited and prepared Rohlik's public sales data for ten fast-moving perishable SKUs.
-- Designed a strict chronological split: training through 31 December 2023 and testing from 1 January to 2 June 2024.
-- Built a sales-only ARIMA benchmark and a feature-aware Prophet model using holidays and discounts.
-- Converted under-forecast and over-forecast costs into transparent newsvendor target quantiles.
-- Compared neutral and cost-aware strategies under the same 154-day evaluation window.
-- Added statistical testing so small numerical differences are not overstated as meaningful wins.
-- Stress-tested the conclusion across four alternative cost structures.
+| **Decision question** | Which forecast-based stocking policy has the lowest estimated asymmetric penalty under stated costs? |
+| **Scope** | 10 high-volume perishable SKUs, Prague_1 warehouse, 154-day chronological holdout |
+| **Models** | ARIMA benchmark; Prophet with holiday and discount regressors |
+| **Policies** | Prophet 50% central forecast; 67.2% commercial and 63.3% ESG target quantiles |
+| **Validation** | MAE, RMSE, sMAPE, Diebold-Mariano test, paired HAC confidence intervals, sensitivity analysis |
+| **Primary artifact** | One executed notebook with saved outputs and interpretation |
 
 ## Results
 
-### 1. Prophet provides the stronger forecasting base
+### Forecast accuracy
 
-On the held-out period, Prophet 50% reduced MAE from `18,359.92` to `14,332.64` and RMSE from `23,736.95` to `19,636.67`. Its sMAPE was `8.11%`, compared with `10.26%` for ARIMA.
+| Strategy | MAE | RMSE | sMAPE |
+|---|---:|---:|---:|
+| ARIMA benchmark | 18,359.92 | 23,736.95 | 10.26% |
+| **Prophet 50%** | **14,332.64** | **19,636.67** | **8.11%** |
+| Prophet 67.2% | 15,755.07 | 20,608.69 | 8.91% |
+| Prophet 63.3% | 15,126.30 | 20,110.16 | 8.56% |
+
+Prophet 50% is the strongest symmetric forecast. A Diebold-Mariano test on squared error rejects equal predictive accuracy (`DM = 3.8478`, `p < 0.001`) in favor of Prophet over ARIMA.
 
 ![Out-of-sample forecast accuracy](figures/forecast_accuracy.png)
 
-### 2. Cost-aware policies improve the scenario-based decision result
+### Base ESG decision scenario
 
-Under the Base ESG assumptions, estimated total penalty fell from `EUR 6.59M` for ARIMA and `EUR 5.58M` for Prophet 50% to:
+| Strategy | Target forecast quantile | Estimated penalty | Change vs. ARIMA |
+|---|---:|---:|---:|
+| ARIMA | n/a | EUR 6.59M | baseline |
+| Prophet neutral | 50.0% | EUR 5.58M | -15.3% |
+| Prophet commercial | 67.2% | EUR 5.33M | -19.1% |
+| Prophet ESG | 63.3% | EUR 5.28M | -19.9% |
 
-- `EUR 5.33M` for Prophet Profit Max at the 67.2% target quantile.
-- `EUR 5.28M` for Prophet ESG at the 63.3% target quantile.
+The 63.3% policy is numerically lowest in this scenario. The paired HAC 95% confidence interval for the total difference between the 67.2% and 63.3% policies is `EUR -59K to EUR 164K`, so the evidence does not establish a definitive winner between the two tuned policies.
 
-The ESG policy is numerically lowest in this scenario, about 20% below ARIMA. However, the paired HAC 95% confidence interval for the difference between the two tuned policies includes zero (`EUR -59K` to `EUR 164K`). The defensible conclusion is therefore that the tuned policies perform similarly under Base ESG costs; the evidence does not establish a decisive winner between 63.3% and 67.2%.
+### Sensitivity to cost assumptions
 
-### 3. The broad conclusion survives alternative cost assumptions
+All four fixed Prophet strategies remain below ARIMA across the tested cost scenarios. The numerical winner changes with the cost ratio, as newsvendor theory predicts.
 
-All Prophet strategies remain below ARIMA in each of the four tested scenarios. The best Prophet policy changes as the under-forecast and over-forecast penalties change, which is the expected newsvendor behavior: the preferred target quantile depends on the cost ratio.
+| Scenario | Implied optimal quantile | Numerical minimum | Tuned-policy inference |
+|---|---:|---|---|
+| Conservative | 63.4% | Prophet 63.3% | No decisive 63.3% vs. 67.2% difference |
+| Base ESG | 63.3% | Prophet 63.3% | No decisive 63.3% vs. 67.2% difference |
+| High waste cost | 55.5% | Prophet 50% | 63.3% lower than 67.2% |
+| High stockout cost | 69.7% | Prophet 67.2% | No decisive 63.3% vs. 67.2% difference |
 
 ![Sensitivity analysis across four cost scenarios](figures/cost_sensitivity.png)
 
+## What Was Built
+
+- A strict chronological split: training through 31 December 2023 and testing from 1 January to 2 June 2024.
+- A sales-only ARIMA benchmark and a Prophet model using holiday and discount regressors.
+- Three Prophet decision policies derived from the same forecast distribution.
+- A transparent asymmetric loss function for under-forecast and over-forecast quantities.
+- Statistical comparisons that separate numerical rankings from supported conclusions.
+- A four-scenario stress test that reprices fixed strategies without retraining them.
+
 ## Decision Interpretation
 
-The 50%, 63.3%, and 67.2% values are **target forecast quantiles representing stocking policies**. They are not service-level measurements, reorder points, or replenishment timing rules.
+The 50%, 63.3%, and 67.2% values are **target forecast quantiles representing stocking policies**. They are not measured service levels, reorder points, or replenishment timing rules.
 
-The analysis answers a bounded decision question: under a shared set of cost assumptions, which forecast-based stocking policy produces the lowest estimated penalty? It does not determine when an order should be placed or reconstruct actual inventory movements.
+This project answers a bounded question: under a shared set of cost assumptions, which forecast-based policy produces the lowest estimated penalty? It does not determine when to order or reconstruct actual inventory movements.
 
-## Repository
+## Inspect or Rerun the Analysis
+
+The fastest inspection path is the **Open in Colab** button. The notebook contains complete saved outputs, so the analysis can be reviewed without rerunning the models.
+
+To rerun it with legally obtained inputs:
+
+1. Accept the rules and download the source files from the [Rohlik Sales Forecasting Challenge V2](https://www.kaggle.com/competitions/rohlik-sales-forecasting-challenge-v2).
+2. Prepare the three input files described in [the data manifest](data/README.md). Competition-derived CSV files are intentionally not redistributed in this repository; the published project is therefore reviewable but not self-contained.
+3. Open the notebook in Colab and upload each file when prompted.
+
+For a local run, use Python 3.10 or 3.11:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+jupyter notebook notebooks/demand_forecasting_cost_aware_stocking.ipynb
+```
+
+Place the prepared files in `data/` before running locally.
+
+## Scope and Limitations
+
+The source data include sales history, availability, price, discount, calendar, and product-category fields. They do not include on-hand inventory, order quantities, replenishment lead times, disposal records, or internal accounting costs.
+
+Therefore:
+
+- the reported financial values are scenario-based penalties, not audited losses or savings;
+- observed sales are used as the evaluation target, not true latent demand;
+- the analysis compares fixed forecast-based policies, not a complete replenishment system;
+- real deployment would require internal inventory, margin, lead-time, replenishment, and waste data.
+
+## Repository Map
 
 ```text
 .
-├── data/                  # Reproducible analysis inputs
-├── figures/               # Portfolio-ready result visuals
+├── data/                  # Input manifest; restricted source data are not redistributed
+├── figures/               # Three headline result visuals
 ├── notebooks/             # Complete analysis with saved outputs
+├── LICENSE                # License for repository code and documentation
 ├── README.md
 └── requirements.txt
 ```
 
-### Main deliverables
+## Methods and Sources
 
-- [Run or review the complete notebook](notebooks/demand_forecasting_cost_aware_stocking.ipynb)
-- [Review the data dictionary and scope](data/README.md)
+- Dataset: [Rohlik Sales Forecasting Challenge V2](https://www.kaggle.com/competitions/rohlik-sales-forecasting-challenge-v2)
+- Forecasting: [Prophet documentation](https://facebook.github.io/prophet/) and `statsmodels` ARIMA/SARIMAX
+- Decision model: newsvendor critical fractile, `Cu / (Cu + Co)`
+- Forecast comparison: Diebold-Mariano testing and lag-7 HAC inference
 
-## Reproduce the Analysis
+The notebook contains the full method definitions, calculations, and references.
 
-The fastest route is the **Open in Colab** button at the top of this page. The notebook contains saved outputs, so it can also be reviewed without rerunning every model.
+## License
 
-In Colab, run the notebook from the top and upload the three files from `data/` when prompted:
-
-1. `rohlik_model_ready.csv`
-2. `inventory.csv`
-3. `sales_train_prague1.csv`
-
-For a local run, use Python 3.10 or 3.11 and install the dependencies:
-
-```bash
-pip install -r requirements.txt
-jupyter notebook notebooks/demand_forecasting_cost_aware_stocking.ipynb
-```
-
-## Data and Scope
-
-Source: [Rohlik Sales Forecasting Challenge V2](https://www.kaggle.com/competitions/rohlik-sales-forecasting-challenge-v2).
-
-The public data include sales history and product/context features, but not on-hand inventory, order quantities, replenishment lead times, disposal records, or internal accounting costs. Consequently, the financial values in this project are **scenario-based penalties for comparing forecast policies**, not audited losses or a reconstruction of Rohlik's operations.
-
-## Skills Demonstrated
-
-- Business problem framing and data-scope auditing
-- Time-series feature engineering and chronological validation
-- ARIMA and Prophet model development
-- Forecast accuracy and statistical comparison
-- Newsvendor critical-fractile decision modeling
-- Asymmetric cost evaluation and sensitivity analysis
-- Clear communication of uncertainty and operational limits
-
-## References
-
-The notebook documents the methods and references used, including Rohlik's public dataset, the newsvendor framework, Prophet, forecast-accuracy measures, Diebold-Mariano testing, and HAC inference.
+Repository code and documentation are available under the [MIT License](LICENSE). Rohlik/Kaggle data are governed by the competition rules and are not covered by this license.
