@@ -2,7 +2,7 @@
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bodhi584/rohlik-demand-forecasting-cost-aware-stocking/blob/main/notebooks/demand_forecasting_cost_aware_stocking.ipynb)
 
-[Review the notebook](notebooks/demand_forecasting_cost_aware_stocking.ipynb) · [See the results](#results) · [Inspect or rerun](#inspect-or-rerun-the-analysis) · [Read the data notes](data/README.md)
+[Review the notebook](notebooks/demand_forecasting_cost_aware_stocking.ipynb) · [See the results](#results) · [Inspect or rerun](#inspect-or-rerun-the-analysis) · [Read the data notes](data/README.md) · [Reuse this project](docs/REUSE_GUIDE.md)
 
 **An evidence-led forecasting and decision-support case study for perishable e-grocery.** It compares ARIMA with feature-aware Prophet forecasts, then translates forecast errors into cost-aware stocking policies using newsvendor quantiles.
 
@@ -112,6 +112,7 @@ Therefore:
 ```text
 .
 ├── data/                  # Input manifest; restricted source data are not redistributed
+├── docs/                  # Reuse guide for related future projects
 ├── figures/               # Three headline result visuals
 ├── notebooks/             # Complete analysis with saved outputs
 ├── LICENSE                # License for repository code and documentation
